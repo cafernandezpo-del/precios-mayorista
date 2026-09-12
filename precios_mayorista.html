@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Precios Mayorista Antioquia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── TOKENS (dark-first) ─────────────────────────────────────── */
+:root {
+  --bg:       #0E1929;
+  --surface:  #152238;
+  --surface2: #1A2B44;
+  --border:   #1E3252;
+  --text:     #DDE8F8;
+  --text2:    #7A92B8;
+  --text3:    #4A6080;
+  --accent:   #3A7BDA;
+  --c1:       #F5C842;
+  --c2:       #F07830;
+  --c3:       #5AACF5;
+  --c4:       #4DC87A;
+  --c1a:      rgba(245,200,66,.15);
+  --c2a:      rgba(240,120,48,.15);
+  --c3a:      rgba(90,172,245,.15);
+  --c4a:      rgba(77,200,122,.15);
+  --up:       #4DC87A;
+  --down:     #F07060;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:       #F4F7FC;
+    --surface:  #FFFFFF;
+    --surface2: #EDF1F8;
+    --border:   #D0DCEA;
+    --text:     #0E1929;
+    --text2:    #4A6080;
+    --text3:    #A0B4CC;
+    --accent:   #1A5FBB;
+  }
+}
+:root[data-theme="light"] {
+  --bg:#F4F7FC; --surface:#FFFFFF; --surface2:#EDF1F8;
+  --border:#D0DCEA; --text:#0E1929; --text2:#4A6080;
+  --text3:#A0B4CC; --accent:#1A5FBB;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app { max-width: 1080px; margin: 0 auto; padding: 24px 20px 48px; }
+header {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  flex-wrap: wrap; gap: 12px;
+}
+header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -.01em; }
+header .sub { font-size: .8rem; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+.updated-tag {
+  font-size: .72rem; color: var(--text3); font-family: 'IBM Plex Mono', monospace;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 8px; white-space: nowrap;
+}
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+@media (max-width: 700px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+.tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px; position: relative; overflow: hidden;
+}
+.tile::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--tc, var(--accent));
+}
+.tile-label { font-size: .72rem; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.tile-price {
+  font-size: 1.5rem; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums; color: var(--text); line-height: 1.1;
+}
+.tile-unit { font-size: .7rem; color: var(--text3); margin-left: 2px; }
+.tile-delta {
+  font-size: .8rem; font-family: 'IBM Plex Mono', monospace;
+  margin-top: 6px; display: flex; align-items: center; gap: 4px;
+}
+.tile-delta.up { color: var(--up); }
+.tile-delta.down { color: var(--down); }
+.tile-delta.flat { color: var(--text3); }
+
+.controls {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+}
+.control-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.control-label { font-size: .72rem; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+
+.chip {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  font-size: .78rem; font-weight: 500; cursor: pointer; transition: all .15s;
+  background: transparent; color: var(--text2); display: flex; align-items: center; gap: 6px;
+}
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+.chip.active { color: var(--text); border-color: transparent; }
+.chip-lt.active { background: var(--c1a); border-color: var(--c1); color: var(--c1); }
+.chip-mo.active { background: var(--c2a); border-color: var(--c2); color: var(--c2); }
+.chip-nv.active { background: var(--c3a); border-color: var(--c3); color: var(--c3); }
+.chip-ah.active { background: var(--c4a); border-color: var(--c4); color: var(--c4); }
+
+.seg { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.seg button {
+  flex: 1; padding: 6px 14px; font-size: .78rem; font-weight: 500;
+  border: none; background: transparent; color: var(--text2); cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+}
+.seg button.active { background: var(--accent); color: #fff; }
+
+.metric-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.metric-toggle button {
+  flex: 1; padding: 6px 12px; font-size: .78rem; font-weight: 500;
+  border: none; background: transparent; color: var(--text2); cursor: pointer; transition: all .15s;
+}
+.metric-toggle button.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 5px; }
+
+.nav-group { display: flex; align-items: center; gap: 8px; }
+.nav-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  transition: all .15s;
+}
+.nav-btn:hover { background: var(--surface); color: var(--text); }
+.nav-title { font-size: .88rem; font-weight: 500; color: var(--text); min-width: 140px; text-align: center; }
+
+.chart-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 20px 20px 16px;
+  position: relative;
+}
+.chart-wrap canvas { width: 100% !important; height: 340px !important; }
+
+.state-msg {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  background: var(--surface); border-radius: 10px;
+  font-size: .9rem; color: var(--text2);
+}
+
+.table-toggle-btn {
+  margin-top: 12px; background: none; border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 14px; font-size: .78rem; color: var(--text2);
+  cursor: pointer; display: block; margin-left: auto; transition: all .15s;
+}
+.table-toggle-btn:hover { color: var(--text); border-color: var(--text3); }
+.data-table { width: 100%; overflow-x: auto; margin-top: 12px; }
+.data-table table {
+  width: 100%; border-collapse: collapse;
+  font-size: .78rem; font-family: 'IBM Plex Mono', monospace;
+}
+.data-table th {
+  text-align: left; padding: 8px 10px;
+  border-bottom: 2px solid var(--border); color: var(--text2);
+  font-weight: 500; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
+}
+.data-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+.data-table tr:hover td { background: var(--surface2); }
+.data-table td.date-col { color: var(--text2); }
+
+.footer { margin-top: 20px; font-size: .72rem; color: var(--text3); text-align: center; }
+.footer a { color: var(--text3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Precios Central Mayorista <span style="color:var(--text2)">Antioquia</span></h1>
+      <div class="sub">Limón Tahití · Mandarina Oneco · Naranja Valencia · Aguacate Hass</div>
+    </div>
+    <div class="updated-tag" id="updatedTag">—</div>
+  </header>
+
+  <div class="tiles" id="tiles">
+    <div class="tile" style="--tc:var(--c1)"><div class="tile-label">Limón Tahití</div><div class="tile-price" id="p0">—</div><div class="tile-delta flat" id="d0">—</div></div>
+    <div class="tile" style="--tc:var(--c2)"><div class="tile-label">Mandarina Oneco</div><div class="tile-price" id="p1">—</div><div class="tile-delta flat" id="d1">—</div></div>
+    <div class="tile" style="--tc:var(--c3)"><div class="tile-label">Naranja Valencia</div><div class="tile-price" id="p2">—</div><div class="tile-delta flat" id="d2">—</div></div>
+    <div class="tile" style="--tc:var(--c4)"><div class="tile-label">Aguacate Hass</div><div class="tile-price" id="p3">—</div><div class="tile-delta flat" id="d3">—</div></div>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Fruta</span>
+      <button class="chip chip-lt active" data-fruit="limon_tahiti"><span class="dot" style="background:var(--c1)"></span>Limón Tahití</button>
+      <button class="chip chip-mo active" data-fruit="mandarina_oneco"><span class="dot" style="background:var(--c2)"></span>Mandarina</button>
+      <button class="chip chip-nv active" data-fruit="naranja_valencia"><span class="dot" style="background:var(--c3)"></span>Naranja</button>
+      <button class="chip chip-ah active" data-fruit="aguacate_hass"><span class="dot" style="background:var(--c4)"></span>Aguacate</button>
+    </div>
+    <div class="control-group">
+      <span class="control-label">Vista</span>
+      <div class="seg">
+        <button class="active" data-view="year">Año</button>
+        <button data-view="month">Mes</button>
+        <button data-view="week">Semana</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="metric-toggle">
+        <button class="active" data-metric="avg">Promedio</button>
+        <button data-metric="range">Rango</button>
+      </div>
+    </div>
+    <div class="nav-group" id="navGroup" style="display:none">
+      <button class="nav-btn" id="navPrev">&#8249;</button>
+      <div class="nav-title" id="navTitle">—</div>
+      <button class="nav-btn" id="navNext">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="state-msg" id="stateMsg" style="display:none"></div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <button class="table-toggle-btn" id="tableToggle">Mostrar tabla de datos</button>
+  <div class="data-table" id="dataTable" hidden></div>
+
+  <div class="footer">Fuente: <a href="https://precios.lamayorista.com.co/" target="_blank">Central Mayorista de Antioquia</a> · Datos 2026</div>
+</div>
+
+<script>
+// ─── DATOS EMBEBIDOS ─────────────────────────────────────────────
+const PRICES_DATA = [
+{"date":"2026-01-06","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8500,"mandarina_oneco_max":8500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-07","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3300,"naranja_valencia_min":3300,"naranja_valencia_max":3300,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-08","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-09","limon_tahiti_avg":2200,"limon_tahiti_min":2000,"limon_tahiti_max":2400,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-10","limon_tahiti_avg":2200,"limon_tahiti_min":2000,"limon_tahiti_max":2400,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8500,"mandarina_oneco_max":8500,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-13","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-14","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-15","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":6500,"mandarina_oneco_min":6000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-16","limon_tahiti_avg":1750,"limon_tahiti_min":1500,"limon_tahiti_max":2000,"mandarina_oneco_avg":6500,"mandarina_oneco_min":6000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-17","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-19","limon_tahiti_avg":1500,"limon_tahiti_min":1500,"limon_tahiti_max":1500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-20","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-21","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-22","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-23","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3250,"aguacate_hass_min":3000,"aguacate_hass_max":3500},
+{"date":"2026-01-24","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3250,"aguacate_hass_min":3000,"aguacate_hass_max":3500},
+{"date":"2026-01-26","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-27","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3500,"aguacate_hass_min":3000,"aguacate_hass_max":4000},
+{"date":"2026-01-28","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3150,"aguacate_hass_min":2800,"aguacate_hass_max":3500},
+{"date":"2026-01-29","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3150,"aguacate_hass_min":2800,"aguacate_hass_max":3500},
+{"date":"2026-01-30","limon_tahiti_avg":1550,"limon_tahiti_min":1500,"limon_tahiti_max":1600,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3150,"aguacate_hass_min":2800,"aguacate_hass_max":3500},
+{"date":"2026-01-31","limon_tahiti_avg":1500,"limon_tahiti_min":1500,"limon_tahiti_max":1500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":3150,"aguacate_hass_min":2800,"aguacate_hass_max":3500},
+{"date":"2026-02-02","limon_tahiti_avg":1500,"limon_tahiti_min":1500,"limon_tahiti_max":1500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":2800,"aguacate_hass_min":2800,"aguacate_hass_max":2800},
+{"date":"2026-02-03","limon_tahiti_avg":1600,"limon_tahiti_min":1600,"limon_tahiti_max":1600,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":2800,"aguacate_hass_min":2800,"aguacate_hass_max":2800},
+{"date":"2026-02-04","limon_tahiti_avg":1400,"limon_tahiti_min":1200,"limon_tahiti_max":1600,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":3600,"aguacate_hass_min":3200,"aguacate_hass_max":4000},
+{"date":"2026-02-05","limon_tahiti_avg":1400,"limon_tahiti_min":1300,"limon_tahiti_max":1500,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":3600,"aguacate_hass_min":3200,"aguacate_hass_max":4000},
+{"date":"2026-02-06","limon_tahiti_avg":1400,"limon_tahiti_min":1300,"limon_tahiti_max":1500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":3600,"aguacate_hass_min":3200,"aguacate_hass_max":4000},
+{"date":"2026-02-07","limon_tahiti_avg":1500,"limon_tahiti_min":1400,"limon_tahiti_max":1600,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":3600,"aguacate_hass_min":3200,"aguacate_hass_max":4000},
+{"date":"2026-02-09","limon_tahiti_avg":1500,"limon_tahiti_min":1400,"limon_tahiti_max":1600,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":3850,"aguacate_hass_min":3200,"aguacate_hass_max":4500},
+{"date":"2026-02-10","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2600,"naranja_valencia_min":2500,"naranja_valencia_max":2700,"aguacate_hass_avg":3850,"aguacate_hass_min":3200,"aguacate_hass_max":4500},
+{"date":"2026-02-11","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2750,"naranja_valencia_min":2700,"naranja_valencia_max":2800,"aguacate_hass_avg":3850,"aguacate_hass_min":3200,"aguacate_hass_max":4500},
+{"date":"2026-02-12","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":2700,"naranja_valencia_min":2700,"naranja_valencia_max":2700,"aguacate_hass_avg":4050,"aguacate_hass_min":3400,"aguacate_hass_max":4700},
+{"date":"2026-02-13","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":2700,"naranja_valencia_min":2700,"naranja_valencia_max":2700,"aguacate_hass_avg":3400,"aguacate_hass_min":3400,"aguacate_hass_max":3400},
+{"date":"2026-02-14","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2700,"naranja_valencia_max":2700,"aguacate_hass_avg":3400,"aguacate_hass_min":3400,"aguacate_hass_max":3400},
+{"date":"2026-02-16","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":2700,"naranja_valencia_min":2700,"naranja_valencia_max":2700,"aguacate_hass_avg":3400,"aguacate_hass_min":3400,"aguacate_hass_max":3400},
+{"date":"2026-02-17","limon_tahiti_avg":2100,"limon_tahiti_min":2000,"limon_tahiti_max":2200,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4250,"aguacate_hass_min":4000,"aguacate_hass_max":4500},
+{"date":"2026-02-18","limon_tahiti_avg":2100,"limon_tahiti_min":2000,"limon_tahiti_max":2200,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4250,"aguacate_hass_min":4000,"aguacate_hass_max":4500},
+{"date":"2026-02-19","limon_tahiti_avg":2100,"limon_tahiti_min":2000,"limon_tahiti_max":2200,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4400,"aguacate_hass_min":4000,"aguacate_hass_max":4800},
+{"date":"2026-02-21","limon_tahiti_avg":2200,"limon_tahiti_min":2000,"limon_tahiti_max":2400,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4400,"aguacate_hass_min":4000,"aguacate_hass_max":4800},
+{"date":"2026-02-25","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-02-26","limon_tahiti_avg":1750,"limon_tahiti_min":1500,"limon_tahiti_max":2000,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-02-27","limon_tahiti_avg":1750,"limon_tahiti_min":1500,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-02-28","limon_tahiti_avg":2150,"limon_tahiti_min":2000,"limon_tahiti_max":2300,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-02","limon_tahiti_avg":2150,"limon_tahiti_min":2000,"limon_tahiti_max":2300,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-03","limon_tahiti_avg":2750,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-04","limon_tahiti_avg":2700,"limon_tahiti_min":2400,"limon_tahiti_max":3000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-05","limon_tahiti_avg":3000,"limon_tahiti_min":3000,"limon_tahiti_max":3000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-06","limon_tahiti_avg":3000,"limon_tahiti_min":3000,"limon_tahiti_max":3000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-07","limon_tahiti_avg":3150,"limon_tahiti_min":3000,"limon_tahiti_max":3300,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-09","limon_tahiti_avg":3150,"limon_tahiti_min":3000,"limon_tahiti_max":3300,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-10","limon_tahiti_avg":3150,"limon_tahiti_min":3000,"limon_tahiti_max":3300,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-11","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-12","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-13","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-14","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-16","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-17","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-18","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-19","limon_tahiti_avg":3750,"limon_tahiti_min":3500,"limon_tahiti_max":4000,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-20","limon_tahiti_avg":4350,"limon_tahiti_min":4200,"limon_tahiti_max":4500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":2800,"naranja_valencia_max":3200,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-03-21","limon_tahiti_avg":4350,"limon_tahiti_min":4200,"limon_tahiti_max":4500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-03-24","limon_tahiti_avg":4350,"limon_tahiti_min":4200,"limon_tahiti_max":4500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-03-25","limon_tahiti_avg":4650,"limon_tahiti_min":4500,"limon_tahiti_max":4800,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-03-26","limon_tahiti_avg":4750,"limon_tahiti_min":4500,"limon_tahiti_max":5000,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-03-27","limon_tahiti_avg":4500,"limon_tahiti_min":4500,"limon_tahiti_max":4500,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-28","limon_tahiti_avg":4500,"limon_tahiti_min":4500,"limon_tahiti_max":4500,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-03-30","limon_tahiti_avg":4250,"limon_tahiti_min":4000,"limon_tahiti_max":4500,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-03-31","limon_tahiti_avg":4250,"limon_tahiti_min":4000,"limon_tahiti_max":4500,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":4350,"aguacate_hass_min":4200,"aguacate_hass_max":4500},
+{"date":"2026-04-06","limon_tahiti_avg":4750,"limon_tahiti_min":4500,"limon_tahiti_max":5000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-04-07","limon_tahiti_avg":4750,"limon_tahiti_min":4500,"limon_tahiti_max":5000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-04-08","limon_tahiti_avg":5250,"limon_tahiti_min":5000,"limon_tahiti_max":5500,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-04-09","limon_tahiti_avg":5250,"limon_tahiti_min":5000,"limon_tahiti_max":5500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-04-10","limon_tahiti_avg":5500,"limon_tahiti_min":5500,"limon_tahiti_max":5500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-04-11","limon_tahiti_avg":5200,"limon_tahiti_min":5200,"limon_tahiti_max":5200,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-04-13","limon_tahiti_avg":5200,"limon_tahiti_min":5200,"limon_tahiti_max":5200,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-04-14","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4700,"aguacate_hass_min":4400,"aguacate_hass_max":5000},
+{"date":"2026-04-15","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":7400,"mandarina_oneco_min":7000,"mandarina_oneco_max":7800,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4700,"aguacate_hass_min":4400,"aguacate_hass_max":5000},
+{"date":"2026-04-16","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":7650,"mandarina_oneco_min":7500,"mandarina_oneco_max":7800,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4700,"aguacate_hass_min":4400,"aguacate_hass_max":5000},
+{"date":"2026-04-17","limon_tahiti_avg":4250,"limon_tahiti_min":4000,"limon_tahiti_max":4500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4700,"aguacate_hass_min":4400,"aguacate_hass_max":5000},
+{"date":"2026-04-18","limon_tahiti_avg":4250,"limon_tahiti_min":4000,"limon_tahiti_max":4500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4700,"aguacate_hass_min":4400,"aguacate_hass_max":5000},
+{"date":"2026-04-20","limon_tahiti_avg":4500,"limon_tahiti_min":4500,"limon_tahiti_max":4500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4450,"aguacate_hass_min":4200,"aguacate_hass_max":4700},
+{"date":"2026-04-21","limon_tahiti_avg":4500,"limon_tahiti_min":4500,"limon_tahiti_max":4500,"mandarina_oneco_avg":6250,"mandarina_oneco_min":6000,"mandarina_oneco_max":6500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4450,"aguacate_hass_min":4200,"aguacate_hass_max":4700},
+{"date":"2026-04-22","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4450,"aguacate_hass_min":4200,"aguacate_hass_max":4700},
+{"date":"2026-04-30","limon_tahiti_avg":3750,"limon_tahiti_min":3500,"limon_tahiti_max":4000,"mandarina_oneco_avg":6250,"mandarina_oneco_min":6000,"mandarina_oneco_max":6500,"naranja_valencia_avg":2650,"naranja_valencia_min":2500,"naranja_valencia_max":2800,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-02","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-04","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-05","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-06","limon_tahiti_avg":3350,"limon_tahiti_min":3200,"limon_tahiti_max":3500,"mandarina_oneco_avg":6500,"mandarina_oneco_min":6500,"mandarina_oneco_max":6500,"naranja_valencia_avg":2700,"naranja_valencia_min":2600,"naranja_valencia_max":2800,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-07","limon_tahiti_avg":3750,"limon_tahiti_min":3500,"limon_tahiti_max":4000,"mandarina_oneco_avg":6500,"mandarina_oneco_min":6500,"mandarina_oneco_max":6500,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-08","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-09","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":2600,"naranja_valencia_min":2500,"naranja_valencia_max":2700,"aguacate_hass_avg":4600,"aguacate_hass_min":4200,"aguacate_hass_max":5000},
+{"date":"2026-05-11","limon_tahiti_avg":3750,"limon_tahiti_min":3500,"limon_tahiti_max":4000,"mandarina_oneco_avg":6500,"mandarina_oneco_min":6500,"mandarina_oneco_max":6500,"naranja_valencia_avg":2600,"naranja_valencia_min":2500,"naranja_valencia_max":2700,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-12","limon_tahiti_avg":4250,"limon_tahiti_min":4000,"limon_tahiti_max":4500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-13","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-14","limon_tahiti_avg":3750,"limon_tahiti_min":3500,"limon_tahiti_max":4000,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-15","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":9000,"mandarina_oneco_min":8500,"mandarina_oneco_max":9500,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-19","limon_tahiti_avg":3400,"limon_tahiti_min":3000,"limon_tahiti_max":3800,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8000,"mandarina_oneco_max":9500,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-20","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":9500,"mandarina_oneco_min":9000,"mandarina_oneco_max":10000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-21","limon_tahiti_avg":3900,"limon_tahiti_min":3800,"limon_tahiti_max":4000,"mandarina_oneco_avg":9500,"mandarina_oneco_min":9000,"mandarina_oneco_max":10000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-22","limon_tahiti_avg":3900,"limon_tahiti_min":3800,"limon_tahiti_max":4000,"mandarina_oneco_avg":9750,"mandarina_oneco_min":9500,"mandarina_oneco_max":10000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-23","limon_tahiti_avg":3700,"limon_tahiti_min":3600,"limon_tahiti_max":3800,"mandarina_oneco_avg":9250,"mandarina_oneco_min":9000,"mandarina_oneco_max":9500,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-25","limon_tahiti_avg":3900,"limon_tahiti_min":3800,"limon_tahiti_max":4000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-26","limon_tahiti_avg":3900,"limon_tahiti_min":3800,"limon_tahiti_max":4000,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2650,"naranja_valencia_min":2500,"naranja_valencia_max":2800,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-27","limon_tahiti_avg":3700,"limon_tahiti_min":3600,"limon_tahiti_max":3800,"mandarina_oneco_avg":9000,"mandarina_oneco_min":9000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-28","limon_tahiti_avg":3700,"limon_tahiti_min":3600,"limon_tahiti_max":3800,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5100,"aguacate_hass_min":4200,"aguacate_hass_max":6000},
+{"date":"2026-05-29","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-05-30","limon_tahiti_avg":4000,"limon_tahiti_min":4000,"limon_tahiti_max":4000,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-01","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2750,"naranja_valencia_min":2700,"naranja_valencia_max":2800,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-02","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-03","limon_tahiti_avg":3750,"limon_tahiti_min":3500,"limon_tahiti_max":4000,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-04","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2650,"naranja_valencia_min":2500,"naranja_valencia_max":2800,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-05","limon_tahiti_avg":3350,"limon_tahiti_min":3200,"limon_tahiti_max":3500,"mandarina_oneco_avg":9000,"mandarina_oneco_min":9000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2650,"naranja_valencia_min":2500,"naranja_valencia_max":2800,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-06","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":9000,"mandarina_oneco_min":9000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2650,"naranja_valencia_min":2500,"naranja_valencia_max":2800,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-09","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-10","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-11","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":7500,"mandarina_oneco_max":8500,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-12","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-16","limon_tahiti_avg":2650,"limon_tahiti_min":2500,"limon_tahiti_max":2800,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2450,"naranja_valencia_min":2400,"naranja_valencia_max":2500,"aguacate_hass_avg":4850,"aguacate_hass_min":4200,"aguacate_hass_max":5500},
+{"date":"2026-06-17","limon_tahiti_avg":2650,"limon_tahiti_min":2500,"limon_tahiti_max":2800,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2450,"naranja_valencia_min":2400,"naranja_valencia_max":2500,"aguacate_hass_avg":5150,"aguacate_hass_min":4300,"aguacate_hass_max":6000},
+{"date":"2026-06-18","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":2400,"naranja_valencia_min":2400,"naranja_valencia_max":2400,"aguacate_hass_avg":5150,"aguacate_hass_min":4300,"aguacate_hass_max":6000},
+{"date":"2026-06-19","limon_tahiti_avg":2400,"limon_tahiti_min":2300,"limon_tahiti_max":2500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-20","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-22","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-23","limon_tahiti_avg":2100,"limon_tahiti_min":2000,"limon_tahiti_max":2200,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-24","limon_tahiti_avg":2200,"limon_tahiti_min":2000,"limon_tahiti_max":2400,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-25","limon_tahiti_avg":2100,"limon_tahiti_min":1800,"limon_tahiti_max":2400,"mandarina_oneco_avg":8000,"mandarina_oneco_min":8000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-26","limon_tahiti_avg":2100,"limon_tahiti_min":1800,"limon_tahiti_max":2400,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-27","limon_tahiti_avg":2100,"limon_tahiti_min":1800,"limon_tahiti_max":2400,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":2500,"naranja_valencia_min":2400,"naranja_valencia_max":2600,"aguacate_hass_avg":5250,"aguacate_hass_min":4500,"aguacate_hass_max":6000},
+{"date":"2026-06-30","limon_tahiti_avg":2150,"limon_tahiti_min":2000,"limon_tahiti_max":2300,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":4650,"aguacate_hass_min":4300,"aguacate_hass_max":5000},
+{"date":"2026-07-01","limon_tahiti_avg":2150,"limon_tahiti_min":2000,"limon_tahiti_max":2300,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":4650,"aguacate_hass_min":4300,"aguacate_hass_max":5000},
+{"date":"2026-07-02","limon_tahiti_avg":2150,"limon_tahiti_min":2000,"limon_tahiti_max":2300,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7000,"mandarina_oneco_max":8000,"naranja_valencia_avg":2600,"naranja_valencia_min":2600,"naranja_valencia_max":2600,"aguacate_hass_avg":4650,"aguacate_hass_min":4300,"aguacate_hass_max":5000},
+{"date":"2026-07-03","limon_tahiti_avg":2150,"limon_tahiti_min":2000,"limon_tahiti_max":2300,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":4650,"aguacate_hass_min":4300,"aguacate_hass_max":5000},
+{"date":"2026-07-04","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":8500,"mandarina_oneco_min":8000,"mandarina_oneco_max":9000,"naranja_valencia_avg":2500,"naranja_valencia_min":2500,"naranja_valencia_max":2500,"aguacate_hass_avg":4650,"aguacate_hass_min":4300,"aguacate_hass_max":5000},
+{"date":"2026-07-06","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":8750,"mandarina_oneco_min":8500,"mandarina_oneco_max":9000,"naranja_valencia_avg":2700,"naranja_valencia_min":2700,"naranja_valencia_max":2700,"aguacate_hass_avg":5500,"aguacate_hass_min":5500,"aguacate_hass_max":5500},
+{"date":"2026-07-07","limon_tahiti_avg":1750,"limon_tahiti_min":1500,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":5750,"aguacate_hass_min":5500,"aguacate_hass_max":6000},
+{"date":"2026-07-08","limon_tahiti_avg":2000,"limon_tahiti_min":2000,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2550,"naranja_valencia_min":2500,"naranja_valencia_max":2600,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-09","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-10","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-11","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2800,"naranja_valencia_min":2800,"naranja_valencia_max":2800,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-14","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":8250,"mandarina_oneco_min":8000,"mandarina_oneco_max":8500,"naranja_valencia_avg":2750,"naranja_valencia_min":2500,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-15","limon_tahiti_avg":1900,"limon_tahiti_min":1800,"limon_tahiti_max":2000,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-16","limon_tahiti_avg":1850,"limon_tahiti_min":1700,"limon_tahiti_max":2000,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-17","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-18","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-21","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-22","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":2900,"naranja_valencia_min":2800,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-23","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-24","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":7750,"mandarina_oneco_min":7500,"mandarina_oneco_max":8000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-25","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-27","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-28","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7500,"mandarina_oneco_min":7500,"mandarina_oneco_max":7500,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-29","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-30","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-07-31","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-08-01","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":7000,"mandarina_oneco_min":7000,"mandarina_oneco_max":7000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-08-03","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-08-04","limon_tahiti_avg":2350,"limon_tahiti_min":2200,"limon_tahiti_max":2500,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-08-05","limon_tahiti_avg":2350,"limon_tahiti_min":2200,"limon_tahiti_max":2500,"mandarina_oneco_avg":7250,"mandarina_oneco_min":7000,"mandarina_oneco_max":7500,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":6000,"aguacate_hass_min":6000,"aguacate_hass_max":6000},
+{"date":"2026-08-08","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":6500,"aguacate_hass_min":6500,"aguacate_hass_max":6500},
+{"date":"2026-08-10","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":6750,"mandarina_oneco_min":6500,"mandarina_oneco_max":7000,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":6500,"aguacate_hass_min":6500,"aguacate_hass_max":6500},
+{"date":"2026-08-11","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":6250,"mandarina_oneco_min":6000,"mandarina_oneco_max":6500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6500,"aguacate_hass_min":6500,"aguacate_hass_max":6500},
+{"date":"2026-08-12","limon_tahiti_avg":2350,"limon_tahiti_min":2200,"limon_tahiti_max":2500,"mandarina_oneco_avg":6250,"mandarina_oneco_min":6000,"mandarina_oneco_max":6500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6500,"aguacate_hass_min":6500,"aguacate_hass_max":6500},
+{"date":"2026-08-13","limon_tahiti_avg":2250,"limon_tahiti_min":2000,"limon_tahiti_max":2500,"mandarina_oneco_avg":5250,"mandarina_oneco_min":5000,"mandarina_oneco_max":5500,"naranja_valencia_avg":3000,"naranja_valencia_min":3000,"naranja_valencia_max":3000,"aguacate_hass_avg":6500,"aguacate_hass_min":6500,"aguacate_hass_max":6500},
+{"date":"2026-08-14","limon_tahiti_avg":2350,"limon_tahiti_min":2200,"limon_tahiti_max":2500,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3350,"naranja_valencia_min":3200,"naranja_valencia_max":3500,"aguacate_hass_avg":6800,"aguacate_hass_min":6800,"aguacate_hass_max":6800},
+{"date":"2026-08-15","limon_tahiti_avg":2350,"limon_tahiti_min":2200,"limon_tahiti_max":2500,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3350,"naranja_valencia_min":3200,"naranja_valencia_max":3500,"aguacate_hass_avg":6800,"aguacate_hass_min":6800,"aguacate_hass_max":6800},
+{"date":"2026-08-18","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3350,"naranja_valencia_min":3200,"naranja_valencia_max":3500,"aguacate_hass_avg":6800,"aguacate_hass_min":6800,"aguacate_hass_max":6800},
+{"date":"2026-08-19","limon_tahiti_avg":2500,"limon_tahiti_min":2500,"limon_tahiti_max":2500,"mandarina_oneco_avg":6250,"mandarina_oneco_min":6000,"mandarina_oneco_max":6500,"naranja_valencia_avg":3350,"naranja_valencia_min":3200,"naranja_valencia_max":3500,"aguacate_hass_avg":6800,"aguacate_hass_min":6800,"aguacate_hass_max":6800},
+{"date":"2026-08-20","limon_tahiti_avg":3250,"limon_tahiti_min":3000,"limon_tahiti_max":3500,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3200,"naranja_valencia_min":3200,"naranja_valencia_max":3200,"aguacate_hass_avg":6800,"aguacate_hass_min":6800,"aguacate_hass_max":6800},
+{"date":"2026-08-21","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6800,"aguacate_hass_min":6800,"aguacate_hass_max":6800},
+{"date":"2026-08-22","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-24","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3100,"naranja_valencia_min":3000,"naranja_valencia_max":3200,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-25","limon_tahiti_avg":3650,"limon_tahiti_min":3500,"limon_tahiti_max":3800,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3500,"naranja_valencia_min":3500,"naranja_valencia_max":3500,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-26","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3500,"naranja_valencia_min":3500,"naranja_valencia_max":3500,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-27","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3500,"naranja_valencia_min":3500,"naranja_valencia_max":3500,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-28","limon_tahiti_avg":3500,"limon_tahiti_min":3500,"limon_tahiti_max":3500,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3500,"naranja_valencia_min":3500,"naranja_valencia_max":3500,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-29","limon_tahiti_avg":3200,"limon_tahiti_min":3200,"limon_tahiti_max":3200,"mandarina_oneco_avg":6000,"mandarina_oneco_min":6000,"mandarina_oneco_max":6000,"naranja_valencia_avg":3250,"naranja_valencia_min":3200,"naranja_valencia_max":3300,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-08-31","limon_tahiti_avg":3200,"limon_tahiti_min":3200,"limon_tahiti_max":3200,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3250,"naranja_valencia_min":3200,"naranja_valencia_max":3300,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-09-01","limon_tahiti_avg":2750,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":5750,"mandarina_oneco_min":5500,"mandarina_oneco_max":6000,"naranja_valencia_avg":3250,"naranja_valencia_min":3200,"naranja_valencia_max":3300,"aguacate_hass_avg":6900,"aguacate_hass_min":6800,"aguacate_hass_max":7000},
+{"date":"2026-09-03","limon_tahiti_avg":3000,"limon_tahiti_min":3000,"limon_tahiti_max":3000,"mandarina_oneco_avg":5250,"mandarina_oneco_min":5000,"mandarina_oneco_max":5500,"naranja_valencia_avg":3300,"naranja_valencia_min":3300,"naranja_valencia_max":3300,"aguacate_hass_avg":7500,"aguacate_hass_min":7500,"aguacate_hass_max":7500},
+{"date":"2026-09-04","limon_tahiti_avg":2750,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":5500,"mandarina_oneco_min":5500,"mandarina_oneco_max":5500,"naranja_valencia_avg":3300,"naranja_valencia_min":3300,"naranja_valencia_max":3300,"aguacate_hass_avg":7500,"aguacate_hass_min":7500,"aguacate_hass_max":7500},
+{"date":"2026-09-05","limon_tahiti_avg":2750,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":5500,"mandarina_oneco_min":5500,"mandarina_oneco_max":5500,"naranja_valencia_avg":3300,"naranja_valencia_min":3300,"naranja_valencia_max":3300,"aguacate_hass_avg":7400,"aguacate_hass_min":7400,"aguacate_hass_max":7400},
+{"date":"2026-09-07","limon_tahiti_avg":3000,"limon_tahiti_min":3000,"limon_tahiti_max":3000,"mandarina_oneco_avg":5250,"mandarina_oneco_min":5000,"mandarina_oneco_max":5500,"naranja_valencia_avg":3300,"naranja_valencia_min":3300,"naranja_valencia_max":3300,"aguacate_hass_avg":7200,"aguacate_hass_min":7200,"aguacate_hass_max":7200},
+{"date":"2026-09-08","limon_tahiti_avg":2750,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":4750,"mandarina_oneco_min":4500,"mandarina_oneco_max":5000,"naranja_valencia_avg":3400,"naranja_valencia_min":3400,"naranja_valencia_max":3400,"aguacate_hass_avg":7200,"aguacate_hass_min":7200,"aguacate_hass_max":7200},
+{"date":"2026-09-09","limon_tahiti_avg":2750,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":4500,"mandarina_oneco_min":4500,"mandarina_oneco_max":4500,"naranja_valencia_avg":3400,"naranja_valencia_min":3400,"naranja_valencia_max":3400,"aguacate_hass_avg":6300,"aguacate_hass_min":6300,"aguacate_hass_max":6300},
+{"date":"2026-09-11","limon_tahiti_avg":3000,"limon_tahiti_min":2500,"limon_tahiti_max":3000,"mandarina_oneco_avg":4250,"mandarina_oneco_min":4000,"mandarina_oneco_max":4500,"naranja_valencia_avg":3400,"naranja_valencia_min":3400,"naranja_valencia_max":3400,"aguacate_hass_avg":6300,"aguacate_hass_min":6300,"aguacate_hass_max":6300}
+];
+
+const FRUITS = [
+  { id:'limon_tahiti',    label:'Limón Tahití',    color:'#F5C842', colorA:'rgba(245,200,66,.12)' },
+  { id:'mandarina_oneco', label:'Mandarina Oneco',  color:'#F07830', colorA:'rgba(240,120,48,.12)' },
+  { id:'naranja_valencia',label:'Naranja Valencia', color:'#5AACF5', colorA:'rgba(90,172,245,.12)' },
+  { id:'aguacate_hass',   label:'Aguacate Hass',   color:'#4DC87A', colorA:'rgba(77,200,122,.12)' },
+];
+
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+let state = {
+  view: 'year',
+  activeFruits: new Set(['limon_tahiti','mandarina_oneco','naranja_valencia','aguacate_hass']),
+  metric: 'avg',
+  currentYear: 2026,
+  currentMonth: 8,
+  weekStart: '2026-09-07',
+  allPrices: [],
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function fmtCOP(v) {
+  if (v == null) return '—';
+  return '$' + Math.round(v).toLocaleString('es-CO');
+}
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0,10);
+}
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+}
+
+// ─── INIT FROM EMBEDDED DATA ──────────────────────────────────────
+function initData() {
+  state.allPrices = PRICES_DATA.slice().sort((a,b) => a.date < b.date ? -1 : 1);
+  const lastDate = state.allPrices[state.allPrices.length-1].date;
+  const [ly, lm] = lastDate.split('-').map(Number);
+  state.currentYear = ly;
+  state.currentMonth = lm - 1;
+  state.weekStart = getWeekStart(lastDate);
+  const nDocs = state.allPrices.length;
+  document.getElementById('updatedTag').textContent = 'Actualizado: ' + lastDate + ' · ' + nDocs + ' reg.';
+  updateTiles();
+  render();
+}
+
+// ─── STAT TILES ─────────────────────────────────────────────────
+function updateTiles() {
+  if (!state.allPrices.length) return;
+  let last = null, lastIdx = -1;
+  for (let i = state.allPrices.length - 1; i >= 0; i--) {
+    const p = state.allPrices[i];
+    if (FRUITS.some(f => p[f.id+'_avg'] != null)) { last = p; lastIdx = i; break; }
+  }
+  if (!last) return;
+  let prev = last;
+  for (let i = lastIdx - 1; i >= 0; i--) {
+    const p = state.allPrices[i];
+    if (FRUITS.some(f => p[f.id+'_avg'] != null)) { prev = p; break; }
+  }
+  FRUITS.forEach((f,i) => {
+    const cur = last[f.id+'_avg'];
+    const old = prev[f.id+'_avg'];
+    document.getElementById('p'+i).innerHTML = fmtCOP(cur) + '<span class="tile-unit">/kg</span>';
+    if (cur != null && old != null) {
+      const delta = cur - old;
+      const pct = old ? ((delta/old)*100).toFixed(1) : 0;
+      const el = document.getElementById('d'+i);
+      if (delta > 0) { el.className='tile-delta up'; el.textContent='▲ '+fmtCOP(delta)+' ('+pct+'%)';
+      } else if (delta < 0) { el.className='tile-delta down'; el.textContent='▼ '+fmtCOP(Math.abs(delta))+' ('+Math.abs(pct)+'%)';
+      } else { el.className='tile-delta flat'; el.textContent='Sin cambio'; }
+    }
+  });
+}
+
+// ─── CHART DATA BUILDERS ─────────────────────────────────────────
+function buildYearData() {
+  const byMonth = {};
+  for (const p of state.allPrices) {
+    if (!p.date.startsWith(''+state.currentYear)) continue;
+    const m = parseInt(p.date.slice(5,7)) - 1;
+    if (!byMonth[m]) byMonth[m] = {counts:{},sums:{},mins:{},maxs:{}};
+    for (const f of FRUITS) {
+      if (!byMonth[m].sums[f.id]) { byMonth[m].sums[f.id]=0; byMonth[m].counts[f.id]=0; byMonth[m].mins[f.id]=Infinity; byMonth[m].maxs[f.id]=-Infinity; }
+      const v = p[f.id+'_avg'];
+      if (v != null) { byMonth[m].sums[f.id]+=v; byMonth[m].counts[f.id]++; }
+      const mn = p[f.id+'_min']; if (mn != null && mn < byMonth[m].mins[f.id]) byMonth[m].mins[f.id]=mn;
+      const mx = p[f.id+'_max']; if (mx != null && mx > byMonth[m].maxs[f.id]) byMonth[m].maxs[f.id]=mx;
+    }
+  }
+  const months = Object.keys(byMonth).map(Number).sort((a,b)=>a-b);
+  const labels = months.map(m => MONTHS_ES[m].slice(0,3));
+  return {labels, byMonth, months};
+}
+
+function buildMonthData() {
+  const m0 = state.currentMonth;
+  const y = state.currentYear;
+  const mm = String(m0+1).padStart(2,'0');
+  const prefix = y+'-'+mm+'-';
+  const prices = state.allPrices.filter(p => p.date.startsWith(prefix));
+  const labels = prices.map(p => p.date.slice(8));
+  return {labels, prices};
+}
+
+function buildWeekData() {
+  const ws = state.weekStart;
+  const we = addDays(ws, 6);
+  const prices = state.allPrices.filter(p => p.date >= ws && p.date <= we);
+  const labels = prices.map(p => {
+    const d = new Date(p.date+'T12:00:00');
+    return ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.getDay()];
+  });
+  return {labels, prices};
+}
+
+// ─── CHART ───────────────────────────────────────────────────────
+let chart = null;
+function render() {
+  const {view, metric} = state;
+  let labels, datasets = [];
+
+  if (view === 'year') {
+    const {labels:lb, byMonth, months} = buildYearData();
+    labels = lb;
+    for (const f of FRUITS) {
+      if (!state.activeFruits.has(f.id)) continue;
+      if (metric === 'avg') {
+        datasets.push({
+          label: f.label, data: months.map(m => {
+            const bm = byMonth[m];
+            return bm && bm.counts[f.id] ? Math.round(bm.sums[f.id]/bm.counts[f.id]) : null;
+          }),
+          borderColor: f.color, backgroundColor: f.colorA,
+          tension: .35, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2, fill: false,
+        });
+      } else {
+        datasets.push({
+          label: f.label+' (prom)', data: months.map(m => {
+            const bm = byMonth[m];
+            return bm && bm.counts[f.id] ? Math.round(bm.sums[f.id]/bm.counts[f.id]) : null;
+          }),
+          borderColor: f.color, backgroundColor: 'transparent',
+          tension: .35, pointRadius: 2, borderWidth: 2, fill: false, order: 1,
+        });
+        datasets.push({
+          label: f.label+' (rango)', data: months.map(m => {
+            const bm = byMonth[m];
+            if (!bm || bm.mins[f.id]===Infinity) return null;
+            return [bm.mins[f.id], bm.maxs[f.id]];
+          }),
+          borderColor: 'transparent', backgroundColor: f.colorA,
+          fill: true, tension: .35, pointRadius: 0, borderWidth: 0, order: 2,
+        });
+      }
+    }
+  } else {
+    const {labels:lb, prices} = view === 'month' ? buildMonthData() : buildWeekData();
+    labels = lb;
+    for (const f of FRUITS) {
+      if (!state.activeFruits.has(f.id)) continue;
+      if (metric === 'avg') {
+        datasets.push({
+          label: f.label, data: prices.map(p => p[f.id+'_avg']),
+          borderColor: f.color, backgroundColor: f.colorA,
+          tension: .3, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2, fill: false,
+        });
+      } else {
+        datasets.push({
+          label: f.label+' (prom)', data: prices.map(p => p[f.id+'_avg']),
+          borderColor: f.color, backgroundColor: 'transparent',
+          tension: .3, pointRadius: 3, borderWidth: 2, fill: false, order: 1,
+        });
+        datasets.push({
+          label: f.label+' (rango)', data: prices.map(p => {
+            const mn = p[f.id+'_min'], mx = p[f.id+'_max'];
+            return (mn != null && mx != null) ? [mn, mx] : null;
+          }),
+          borderColor: 'transparent', backgroundColor: f.colorA,
+          fill: true, tension: .3, pointRadius: 0, borderWidth: 0, order: 2,
+        });
+      }
+    }
+  }
+
+  const navGroup = document.getElementById('navGroup');
+  const navTitle = document.getElementById('navTitle');
+  if (view === 'year') {
+    navGroup.style.display = 'none';
+  } else if (view === 'month') {
+    navGroup.style.display = 'flex';
+    navTitle.textContent = MONTHS_ES[state.currentMonth] + ' ' + state.currentYear;
+  } else {
+    navGroup.style.display = 'flex';
+    const we = addDays(state.weekStart, 6);
+    navTitle.textContent = state.weekStart.slice(5) + ' → ' + we.slice(5);
+  }
+
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text2').trim();
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+
+  const chartData = {labels, datasets};
+  if (chart) {
+    chart.data = chartData;
+    chart.update('none');
+  } else {
+    const ctx = document.getElementById('chart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: chartData,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'top', align: 'start',
+            labels: { color: textColor, usePointStyle: true, pointStyleWidth: 10, boxHeight: 8, padding: 16, font: {size:12} },
+            filter: item => !item.label.includes('(rango)'),
+          },
+          tooltip: {
+            backgroundColor: '#0E1929', borderColor: '#1E3252', borderWidth: 1,
+            titleColor: '#7A92B8', bodyColor: '#DDE8F8', padding: 12,
+            callbacks: {
+              label: ctx => {
+                if (ctx.dataset.label?.includes('(rango)')) return null;
+                const v = ctx.parsed.y;
+                return ' ' + ctx.dataset.label + ': ' + fmtCOP(v);
+              }
+            }
+          },
+        },
+        scales: {
+          x: { grid:{color:borderColor,lineWidth:.5}, ticks:{color:textColor,maxTicksLimit:12,font:{size:11}} },
+          y: {
+            grid:{color:borderColor,lineWidth:.5}, ticks:{color:textColor,font:{size:11},
+              callback: v => '$'+Math.round(v).toLocaleString('es-CO')
+            }
+          },
+        }
+      }
+    });
+  }
+
+  renderTable(labels, datasets.filter(d => !d.label?.includes('(rango)')));
+}
+
+function renderTable(labels, datasets) {
+  const container = document.getElementById('dataTable');
+  if (container.hidden) return;
+  const rows = labels.map((lbl,i) => {
+    const cells = datasets.map(ds => {
+      const v = ds.data[i];
+      return '<td>'+fmtCOP(typeof v === 'number' ? v : null)+'</td>';
+    }).join('');
+    return '<tr><td class="date-col">'+lbl+'</td>'+cells+'</tr>';
+  }).join('');
+  const heads = datasets.map(ds => '<th>'+ds.label+'</th>').join('');
+  container.innerHTML = '<table><thead><tr><th>Fecha</th>'+heads+'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ─── EVENTS ─────────────────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.fruit;
+    if (state.activeFruits.has(f)) {
+      if (state.activeFruits.size > 1) { state.activeFruits.delete(f); btn.classList.remove('active'); }
+    } else { state.activeFruits.add(f); btn.classList.add('active'); }
+    render();
+  });
+});
+
+document.querySelectorAll('.seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.view = btn.dataset.view;
+    document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('active', b===btn));
+    render();
+  });
+});
+
+document.querySelectorAll('.metric-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.metric = btn.dataset.metric;
+    document.querySelectorAll('.metric-toggle button').forEach(b => b.classList.toggle('active', b===btn));
+    render();
+  });
+});
+
+document.getElementById('navPrev').addEventListener('click', () => {
+  if (state.view === 'month') {
+    state.currentMonth--;
+    if (state.currentMonth < 0) { state.currentMonth = 11; state.currentYear--; }
+  } else if (state.view === 'week') {
+    state.weekStart = addDays(state.weekStart, -7);
+  }
+  render();
+});
+
+document.getElementById('navNext').addEventListener('click', () => {
+  if (state.view === 'month') {
+    state.currentMonth++;
+    if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear++; }
+  } else if (state.view === 'week') {
+    state.weekStart = addDays(state.weekStart, 7);
+  }
+  render();
+});
+
+document.getElementById('tableToggle').addEventListener('click', () => {
+  const tbl = document.getElementById('dataTable');
+  tbl.hidden = !tbl.hidden;
+  document.getElementById('tableToggle').textContent = tbl.hidden ? 'Mostrar tabla de datos' : 'Ocultar tabla';
+  if (!tbl.hidden) {
+    const labels = chart?.data?.labels || [];
+    const datasets = (chart?.data?.datasets || []).filter(d => !d.label?.includes('(rango)'));
+    renderTable(labels, datasets);
+  }
+});
+
+// ─── BOOT ────────────────────────────────────────────────────────
+initData();
+</script>
+</body>
+</html>
