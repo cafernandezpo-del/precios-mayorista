@@ -740,7 +740,9 @@ document.getElementById('tableToggle').addEventListener('click', () => {
   tbl.hidden = !tbl.hidden;
   document.getElementById('tableToggle').textContent = tbl.hidden ? 'Mostrar tabla de datos' : 'Ocultar tabla';
   if (!tbl.hidden) {
-    const labels = chart?.data?.labels || [];
+    const labels = chart?.data?.labels || [,
+{"date":"2026-09-12","aguacate_hass_avg":6300,"aguacate_hass_min":6300,"aguacate_hass_max":6300,"limon_tahiti_avg":3000,"limon_tahiti_min":3000,"limon_tahiti_max":3000,"mandarina_oneco_avg":4500,"mandarina_oneco_min":4500,"mandarina_oneco_max":4500,"naranja_valencia_avg":3400,"naranja_valencia_min":3400,"naranja_valencia_max":3400}
+];
     const datasets = (chart?.data?.datasets || []).filter(d => !d.label?.includes('(rango)'));
     renderTable(labels, datasets);
   }
