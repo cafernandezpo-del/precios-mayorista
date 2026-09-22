@@ -721,6 +721,20 @@ function render() {
     });
   }
 
+  const msg = document.getElementById('stateMsg');
+  const hasData = datasets.some(d => Array.isArray(d.data) && d.data.some(v => v != null));
+  if (!hasData && state.allPrices.length) {
+    const f0 = state.allPrices[0].date.split('-').reverse().join('/');
+    const f1 = state.allPrices[state.allPrices.length-1].date.split('-').reverse().join('/');
+    const srcName = state.source === 'corabastos' ? 'Corabastos' : 'Central Mayorista';
+    msg.innerHTML = '<div style="font-size:1.05rem;font-weight:600;color:var(--text)">Sin datos en este periodo</div>'
+      + '<div>' + srcName + ': ' + state.allPrices.length + ' registros entre ' + f0 + ' y ' + f1 + '</div>';
+    msg.style.display = 'flex';
+  } else {
+    msg.style.display = 'none';
+    msg.innerHTML = '';
+  }
+
   renderTable(labels, datasets.filter(d => !d.label?.includes('(rango)')));
 }
 
@@ -764,10 +778,10 @@ document.querySelectorAll('.chip').forEach(btn => {
   });
 });
 
-document.querySelectorAll('.seg button').forEach(btn => {
+document.querySelectorAll('.seg:not(#sourceSeg) button').forEach(btn => {
   btn.addEventListener('click', () => {
     state.view = btn.dataset.view;
-    document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.seg:not(#sourceSeg) button').forEach(b => b.classList.toggle('active', b===btn));
     render();
   });
 });
