@@ -180,7 +180,7 @@ header .sub { font-size: .8rem; color: var(--text2); font-family: 'IBM Plex Mono
 <div class="app">
   <header>
     <div>
-      <h1>Precios Central Mayorista <span style="color:var(--text2)">Antioquia</span></h1>
+      <h1 id="mainTitle">Precios Central Mayorista <span style="color:var(--text2)">Antioquia</span></h1>
       <div class="sub">Limón Tahití · Mandarina Oneco · Naranja Valencia · Aguacate Hass</div>
     </div>
     <div class="updated-tag" id="updatedTag">—</div>
@@ -194,6 +194,13 @@ header .sub { font-size: .8rem; color: var(--text2); font-family: 'IBM Plex Mono
   </div>
 
   <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Fuente</span>
+      <div class="seg" id="sourceSeg">
+        <button class="active" data-source="mayorista">C. Mayorista</button>
+        <button data-source="corabastos">Corabastos</button>
+      </div>
+    </div>
     <div class="control-group">
       <span class="control-label">Fruta</span>
       <button class="chip chip-lt active" data-fruit="limon_tahiti"><span class="dot" style="background:var(--c1)"></span>Limón Tahití</button>
@@ -230,7 +237,7 @@ header .sub { font-size: .8rem; color: var(--text2); font-family: 'IBM Plex Mono
   <button class="table-toggle-btn" id="tableToggle">Mostrar tabla de datos</button>
   <div class="data-table" id="dataTable" hidden></div>
 
-  <div class="footer">Fuente: <a href="https://precios.lamayorista.com.co/" target="_blank">Central Mayorista de Antioquia</a> · Datos 2026</div>
+  <div class="footer" id="sourceFooter">Fuente: <a href="https://precios.lamayorista.com.co/" target="_blank">Central Mayorista de Antioquia</a> · Datos 2026</div>
 </div>
 
 <script>
@@ -438,6 +445,39 @@ const FRUITS = [
   { id:'aguacate_hass',   label:'Aguacate Hass',   color:'#4DC87A', colorA:'rgba(77,200,122,.12)' },
 ];
 
+const CORABASTOS_DATA = [
+{"date":"2026-08-28","limon_tahiti_avg":2857.0,"limon_tahiti_min":2785.71,"limon_tahiti_max":2857.14,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3200.0,"naranja_valencia_min":3100.0,"naranja_valencia_max":3200.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-08-31","limon_tahiti_avg":3143.0,"limon_tahiti_min":3071.43,"limon_tahiti_max":3142.86,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-01","limon_tahiti_avg":3143.0,"limon_tahiti_min":3071.43,"limon_tahiti_max":3142.86,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-02","limon_tahiti_avg":3143.0,"limon_tahiti_min":3071.43,"limon_tahiti_max":3142.86,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-03","limon_tahiti_avg":3429.0,"limon_tahiti_min":3357.14,"limon_tahiti_max":3428.57,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-04","limon_tahiti_avg":3429.0,"limon_tahiti_min":3357.14,"limon_tahiti_max":3428.57,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-07","limon_tahiti_avg":3571.0,"limon_tahiti_min":3500.0,"limon_tahiti_max":3571.43,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-08","limon_tahiti_avg":3571.0,"limon_tahiti_min":3500.0,"limon_tahiti_max":3571.43,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-09","limon_tahiti_avg":3571.0,"limon_tahiti_min":3500.0,"limon_tahiti_max":3571.43,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-10","limon_tahiti_avg":3571.0,"limon_tahiti_min":3500.0,"limon_tahiti_max":3571.43,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-14","limon_tahiti_avg":3571.0,"limon_tahiti_min":3500.0,"limon_tahiti_max":3571.43,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-15","limon_tahiti_avg":4286.0,"limon_tahiti_min":4142.86,"limon_tahiti_max":4285.71,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-16","limon_tahiti_avg":4286.0,"limon_tahiti_min":4142.86,"limon_tahiti_max":4285.71,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-17","limon_tahiti_avg":4286.0,"limon_tahiti_min":4142.86,"limon_tahiti_max":4285.71,"mandarina_oneco_avg":5000.0,"mandarina_oneco_min":4000.0,"mandarina_oneco_max":5000.0,"naranja_valencia_avg":3000.0,"naranja_valencia_min":2900.0,"naranja_valencia_max":3000.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0},
+{"date":"2026-09-21","limon_tahiti_avg":4286.0,"limon_tahiti_min":4142.86,"limon_tahiti_max":4285.71,"mandarina_oneco_avg":4000.0,"mandarina_oneco_min":3500.0,"mandarina_oneco_max":4000.0,"naranja_valencia_avg":3200.0,"naranja_valencia_min":3100.0,"naranja_valencia_max":3200.0,"aguacate_hass_avg":9000.0,"aguacate_hass_min":8500.0,"aguacate_hass_max":9000.0}
+];
+
+const SOURCE_CONFIG = {
+  mayorista: {
+    label: 'Central Mayorista de Antioquia',
+    title: 'Precios Central Mayorista <span style="color:var(--text2)">Antioquia</span>',
+    url: 'https://precios.lamayorista.com.co/',
+    sourceName: 'Central Mayorista de Antioquia'
+  },
+  corabastos: {
+    label: 'Corabastos Bogotá',
+    title: 'Precios <span style="color:var(--text2)">Corabastos Bogotá</span>',
+    url: 'https://colprecios.com/corabastos',
+    sourceName: 'Colprecios · Corabastos Bogotá'
+  }
+};
+
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 let state = {
@@ -448,6 +488,7 @@ let state = {
   currentMonth: 8,
   weekStart: '2026-09-07',
   allPrices: [],
+  source: 'mayorista',
 };
 
 // ─── HELPERS ─────────────────────────────────────────────────────
@@ -470,7 +511,8 @@ function addDays(dateStr, n) {
 
 // ─── INIT FROM EMBEDDED DATA ──────────────────────────────────────
 function initData() {
-  state.allPrices = PRICES_DATA.slice().sort((a,b) => a.date < b.date ? -1 : 1);
+  const srcData = state.source === 'corabastos' ? CORABASTOS_DATA : PRICES_DATA;
+  state.allPrices = srcData.slice().sort((a,b) => a.date < b.date ? -1 : 1);
   const lastDate = state.allPrices[state.allPrices.length-1].date;
   const [ly, lm] = lastDate.split('-').map(Number);
   state.currentYear = ly;
@@ -695,6 +737,21 @@ function renderTable(labels, datasets) {
   const heads = datasets.map(ds => '<th>'+ds.label+'</th>').join('');
   container.innerHTML = '<table><thead><tr><th>Fecha</th>'+heads+'</tr></thead><tbody>'+rows+'</tbody></table>';
 }
+
+// ─── SELECTOR DE FUENTE ─────────────────────────────────────────
+function setSource(src) {
+  if (!SOURCE_CONFIG[src] || state.source === src) return;
+  state.source = src;
+  const cfg = SOURCE_CONFIG[src];
+  document.getElementById('mainTitle').innerHTML = cfg.title;
+  document.getElementById('sourceFooter').innerHTML = 'Fuente: <a href="' + cfg.url + '" target="_blank">' + cfg.sourceName + '</a> · Datos 2026';
+  document.querySelectorAll('#sourceSeg button').forEach(b => b.classList.toggle('active', b.dataset.source === src));
+  initData();
+}
+
+document.querySelectorAll('#sourceSeg button').forEach(btn => {
+  btn.addEventListener('click', () => setSource(btn.dataset.source));
+});
 
 // ─── EVENTS ─────────────────────────────────────────────────────
 document.querySelectorAll('.chip').forEach(btn => {
